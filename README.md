@@ -84,7 +84,8 @@ set TNS_ADMIN=C:\oracle\wallet_target
 
 Test the connection:
 
-sqlplus target_user@DB_TARGET_TCPS
+sqlplus target_user@DB_TARGET_TCPS or SQL DEVELOPER -> SELECT * FROM dual@NOME_DBLINK;
+
 
 If the connection succeeds, the wallet and TCPS configuration are correct.
 
