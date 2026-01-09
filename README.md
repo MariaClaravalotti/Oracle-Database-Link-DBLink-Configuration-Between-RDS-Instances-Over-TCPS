@@ -1,67 +1,161 @@
-# Oracle-Database-Link-DBLink-Configuration-Between-RDS-Instances-Over-TCPS
-This project documents the secure configuration of Oracle DBLinks between Amazon RDS instances using TCPS, enabling encrypted cross-database communication.
+# DBLink RDS Oracle via TCPS Oracle-Database (Port 2484)
 
+This document describes exactly the steps I executed to create a secure DBLink between two AWS RDS Oracle databases using TCPS (port 2484), following the same structure used in my Git repository.
 
-## Problem
+---
 
-Standard DBLink configurations may transmit data without encryption, violating security and compliance requirements.
+## Architecture
 
-## 🏗 Architecture
+Source: RDS Oracle A  
+Target: RDS Oracle B  
+Protocol: TCPS  
+Port: 2484  
+Security: Oracle Wallet (SSL)  
+Local environment: Windows  
 
-Amazon RDS for Oracle (Source and Target)
+---
 
-TCPS (Port 2484)
+## Step 1 – Validate RDS prerequisites
 
-Oracle Wallet
+1. Confirm that TCPS is enabled on both RDS instances and that port 2484 is allowed in the Security Group.
+2. Confirm network connectivity between the RDS instances (Security Group to Security Group or allowed IP).
+3. Ensure a valid database user and password exist on the target database.
 
-SSL Certificates
+---
 
-## ⚙️ How It Works (Step-by-Step)
+## Step 2 – Download the wallet from the target RDS
 
-Download AWS RDS root certificates.
+From the AWS Console:
 
-Create and configure Oracle Wallet.
+1. Go to RDS → Databases → target database
+2. Open Configuration
+3. Download the DB Instance Wallet
+4. Extract the ZIP file locally on Windows
 
-Import certificates into the Wallet.
+Example local path:
 
-Configure sqlnet.ora and tnsnames.ora.
+C:\oracle\wallet_target
 
-Create DBLink using TCPS connection string.
+---
 
-Validate encrypted communication.
+## Step 3 – Create sqlnet.ora (local/client)
 
-## 🚀 Key Features
+File path:
 
-Encrypted database-to-database traffic
+C:\oracle\wallet_target\sqlnet.ora
 
-Secure credential handling
+Content:
 
-Compliance-ready configuration
+WALLET_LOCATION =
+ (SOURCE =
+   (METHOD = FILE)
+   (METHOD_DATA =
+     (DIRECTORY = C:\oracle\wallet_target)
+   )
+ )
 
-## 🛠 Technologies
+SSL_SERVER_DN_MATCH = YES
 
-Amazon RDS Oracle
+---
 
-Oracle Wallet
+## Step 4 – Create tnsnames.ora
 
-TCPS / SSL
+File path:
 
-SQL*Plus
+C:\oracle\wallet_target\tnsnames.ora
 
-## 📈 Results
+Example content:
 
-Secure data exchange between RDS instances
+DB_TARGET_TCPS =
+ (DESCRIPTION =
+   (ADDRESS = (PROTOCOL = TCPS)(HOST = target-rds-endpoint)(PORT = 2484))
+   (CONNECT_DATA =
+     (SERVICE_NAME = ORCL)
+   )
+ )
 
-Successful DBLink connectivity over TCPS
+---
 
-Compliance with security standards
+## Step 5 – Test the connection using SQL*Plus (local)
 
-## 📚 Lessons Learned
+Set the TNS_ADMIN variable:
 
-TCPS is mandatory in regulated environments
+set TNS_ADMIN=C:\oracle\wallet_target
 
-Wallet management is critical
+Test the connection:
 
-DBLink security requires careful configuration
+sqlplus target_user@DB_TARGET_TCPS
+
+If the connection succeeds, the wallet and TCPS configuration are correct.
+
+---
+
+## Step 6 – Upload the wallet to the source RDS
+
+Files to include in the ZIP:
+- cwallet.sso
+- ewallet.p12
+- sqlnet.ora
+- tnsnames.ora
+
+ZIP file name:
+
+wallet_tcps.zip
+
+Upload the wallet using the AWS RDS utility package:
+
+exec rdsadmin.rdsadmin_util.upload_wallet(
+  p_wallet    => 'WALLET_TCPS',
+  p_directory => 'DATA_PUMP_DIR'
+);
+
+---
+
+## Step 7 – Configure sqlnet on the source RDS
+
+Configure the wallet location on the source RDS:
+
+exec rdsadmin.rdsadmin_util.set_configuration(
+  name  => 'WALLET_LOCATION',
+  value => '/rdsdbdata/config/wallet'
+);
+
+---
+
+## Step 8 – Create the DBLink
+
+Connected to the source RDS:
+
+CREATE DATABASE LINK DBLINK_TCPS_TARGET
+CONNECT TO target_user IDENTIFIED BY "password"
+USING 'DB_TARGET_TCPS';
+
+---
+
+## Step 9 – Test the DBLink
+
+SELECT * FROM dual@DBLINK_TCPS_TARGET;
+
+If it returns X, the TCPS DBLink is working correctly.
+
+---
+
+## Important Notes
+
+- Port 2484 is mandatory for TCPS
+- The wallet must match the target RDS wallet
+- SSL_SERVER_DN_MATCH = YES is required
+- Always test the TCPS connection locally before creating the DBLink
+
+---
+
+## Status
+
+DBLink successfully created  
+Encrypted communication using TCPS  
+Validated in production environment  
+
+Author: Maria Clara
+
 
 <img width="767" height="589" alt="image" src="https://github.com/user-attachments/assets/88c5b9de-433f-4008-82ee-6503c94be52c" />
