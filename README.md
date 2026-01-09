@@ -160,3 +160,5 @@ Author: Maria Clara
 
 
 <img width="767" height="589" alt="image" src="https://github.com/user-attachments/assets/88c5b9de-433f-4008-82ee-6503c94be52c" />
+<img width="1133" height="320" alt="image" src="https://github.com/user-attachments/assets/fe70c57d-f066-4c88-8cc8-0cf68c0ded4f" />
+
